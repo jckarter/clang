@@ -3327,10 +3327,11 @@ CINDEX_LINKAGE CXMacroVarargsKind clang_getMacroVarargsKind(CXCursor Cursor);
 CINDEX_LINKAGE int clang_isMacroBuiltin(CXCursor Cursor);
 
 /**
- * \brief Returns the number of arguments (not including varargs) taken by
- * the function-like macro referenced by \p Cursor. If the macro is not
- * function-like, or the cursor does not reference a macro, UINT_MAX is
- * returned.
+ * \brief Returns the number of arguments taken by the function-like macro
+ * referenced by \p Cursor. If the macro is a variadic macro, the variadic
+ * argument is counted as an additional argument with the name __VA_ARGS__.
+ * If the macro is not function-like, or the cursor does not reference a
+ * macro, UINT_MAX is returned.
  *
  * \param Cursor a CXCursor of kind CXCursor_MacroDefinition. If the cursor
  * is of a different kind or is invalid, UINT_MAX is returned.
@@ -3345,6 +3346,9 @@ CINDEX_LINKAGE unsigned clang_getNumMacroArgs(CXCursor Cursor);
  *
  * \param Cursor a CXCursor of kind CXCursor_MacroDefinition. If the cursor
  * is of a different kind or is invalid, an empty string is returned.
+ *
+ * \param index the index of the argument whose name will be returned. If
+ * out of bounds, an empty string is returned.
  */
 CINDEX_LINKAGE CXString clang_getMacroArgName(CXCursor Cursor, unsigned index);
 
