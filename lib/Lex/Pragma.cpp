@@ -667,7 +667,8 @@ void Preprocessor::HandlePragmaPopMacro(Token &PopMacroTok) {
     if (CurrentMI) {
       if (CurrentMI->isWarnIfUnused())
         WarnUnusedMacroLocs.erase(CurrentMI->getDefinitionLoc());
-      ReleaseMacroInfo(CurrentMI);
+      if (Record == 0)
+        ReleaseMacroInfo(CurrentMI);
     }
 
     // Get the MacroInfo we want to reinstall.

@@ -3436,8 +3436,9 @@ PreprocessedEntity *ASTReader::ReadPreprocessedEntity(unsigned Index) {
     // Decode the identifier info and then check again; if the macro is
     // still defined and associated with the identifier,
     IdentifierInfo *II = getLocalIdentifier(M, Record[0]);
+    MacroInfo *Macro = PP.getMacroInfo(II);
     MacroDefinition *MD
-      = new (PPRec) MacroDefinition(II, Range);
+      = new (PPRec) MacroDefinition(II, Range, Macro);
 
     if (DeserializationListener)
       DeserializationListener->MacroDefinitionRead(PPID, MD);

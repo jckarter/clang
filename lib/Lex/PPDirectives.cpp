@@ -1872,8 +1872,10 @@ void Preprocessor::HandleUndefDirective(Token &UndefTok) {
   if (MI->isWarnIfUnused())
     WarnUnusedMacroLocs.erase(MI->getDefinitionLoc());
 
-  // Free macro definition.
-  ReleaseMacroInfo(MI);
+  // Free macro definition unless a preprocessing record is being made.
+  // The MacroDefinition record entry also has a reference to the MacroInfo.
+  if (Record == 0)
+    ReleaseMacroInfo(MI);
   setMacroInfo(MacroNameTok.getIdentifierInfo(), 0);
 }
 

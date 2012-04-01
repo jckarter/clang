@@ -375,7 +375,7 @@ void PreprocessingRecord::MacroDefined(const Token &Id,
                                        const MacroInfo *MI) {
   SourceRange R(MI->getDefinitionLoc(), MI->getDefinitionEndLoc());
   MacroDefinition *Def
-      = new (*this) MacroDefinition(Id.getIdentifierInfo(), R);
+      = new (*this) MacroDefinition(Id.getIdentifierInfo(), R, MI);
   MacroDefinitions[MI] = addPreprocessedEntity(Def);
 }
 

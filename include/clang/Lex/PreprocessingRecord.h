@@ -141,12 +141,20 @@ namespace clang {
     /// \brief The name of the macro being defined.
     const IdentifierInfo *Name;
 
+    /// \brief MacroInfo for the macro being defined.
+    const MacroInfo *Info;
+
   public:
-    explicit MacroDefinition(const IdentifierInfo *Name, SourceRange Range)
-      : PreprocessingDirective(MacroDefinitionKind, Range), Name(Name) { }
+    explicit MacroDefinition(const IdentifierInfo *Name, SourceRange Range,
+                             const MacroInfo *Info)
+      : PreprocessingDirective(MacroDefinitionKind, Range), Name(Name),
+        Info(Info) { }
     
     /// \brief Retrieve the name of the macro being defined.
     const IdentifierInfo *getName() const { return Name; }
+    
+    /// \brief Retrieve the MacroInfo for the macro being defined.
+    const MacroInfo *getMacroInfo() const { return Info; }
     
     /// \brief Retrieve the location of the macro name in the definition.
     SourceLocation getLocation() const { return getSourceRange().getBegin(); }
