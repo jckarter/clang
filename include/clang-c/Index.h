@@ -3279,6 +3279,98 @@ CINDEX_LINKAGE void clang_disposeTokens(CXTranslationUnit TU,
  */
 
 /**
+ * \defgroup CINDEX_MACROS Macro introspection
+ *
+ * The routines are used to introspect macro definitions, referenced by
+ * cursors of kind CXCursor_MacroDefinition.
+ *
+ * @{
+ */
+
+/**
+ * \brief Returns true if the macro referenced by \p Cursor is function-like,
+ * that is, it takes arguments.
+ *
+ * \param Cursor a CXCursor of kind CXCursor_MacroDefinition. If the cursor
+ * is of a different kind or is invalid, false is returned.
+ */
+CINDEX_LINKAGE int clang_isMacroFunctionLike(CXCursor Cursor);
+
+/**
+ * \brief Describes the variadicity of a macro.
+ */
+typedef enum CXMacroVarargsKind {
+  CXMacroVarargs_NotVariadic = 0,
+  CXMacroVarargs_C99,
+  CXMacroVarargs_GNU
+} CXMacroVarargsKind;
+
+/**
+ * \brief Returns the variadicity of the macro referenced by \p Cursor. If
+ * the macro is not variadic, the macro is not a function-like macro, or
+ * the cursor does not reference a macro, CXMacroVarargs_NotVariadic is
+ * returned.
+ *
+ * \param Cursor a CXCursor of kind CXCursor_MacroDefinition. If the cursor
+ * is of a different kind or is invalid, CXMacroVarargs_NotVariadic is
+ * returned.
+ */
+CINDEX_LINKAGE CXMacroVarargsKind clang_getMacroVarargsKind(CXCursor Cursor);
+
+/**
+ * \brief Returns true if the macro referenced by \p Cursor is a builtin macro,
+ * such as __LINE__.
+ *
+ * \param Cursor a CXCursor of kind CXCursor_MacroDefinition. If the cursor
+ * is of a different kind or is invalid, false is returned.
+ */
+CINDEX_LINKAGE int clang_isMacroBuiltin(CXCursor Cursor);
+
+/**
+ * \brief Returns the number of arguments (not including varargs) taken by
+ * the function-like macro referenced by \p Cursor. If the macro is not
+ * function-like, or the cursor does not reference a macro, UINT_MAX is
+ * returned.
+ *
+ * \param Cursor a CXCursor of kind CXCursor_MacroDefinition. If the cursor
+ * is of a different kind or is invalid, UINT_MAX is returned.
+ */
+CINDEX_LINKAGE unsigned clang_getNumMacroArgs(CXCursor Cursor);
+
+/**
+ * \brief Returns the name of an argument of the function-like macro
+ * referenced by \p Cursor. If the macro is not function-like, the macro does
+ * not take enough parameters, or the cursor does not reference a macro, an
+ * empty string is returned.
+ *
+ * \param Cursor a CXCursor of kind CXCursor_MacroDefinition. If the cursor
+ * is of a different kind or is invalid, an empty string is returned.
+ */
+CINDEX_LINKAGE CXString clang_getMacroArgName(CXCursor Cursor, unsigned index);
+
+/**
+ * \brief Returns the raw lexical tokens from the expansion of the macro
+ * referenced by \p Cursor.
+ *
+ * \param Cursor a CXCursor of kind CXCursor_MacroDefinition. If the cursor
+ * is of a different kind or is invalid, \p Tokens will be set to a null
+ * pointer, and \p NumTokens will be set to zero.
+ *
+ * \param Tokens this pointer will be set to point to the array of tokens
+ * that occur within the given source range. The returned pointer must be
+ * freed with clang_disposeTokens() before the translation unit is destroyed.
+ *
+ * \param NumTokens will be set to the number of tokens in the \c *Tokens
+ * array.
+ */
+void clang_getMacroReplacementTokens(CXCursor C, CXToken **Tokens,
+                                     unsigned *NumTokens);
+
+/**
+ * @}
+ */
+
+/**
  * \defgroup CINDEX_DEBUG Debugging facilities
  *
  * These routines are used for testing and debugging, only, and should not

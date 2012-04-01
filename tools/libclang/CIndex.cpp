@@ -4629,6 +4629,41 @@ CXSourceRange clang_getTokenExtent(CXTranslationUnit TU, CXToken CXTok) {
                         SourceLocation::getFromRawEncoding(CXTok.int_data[1]));
 }
 
+static void initializeToken(ASTUnit *CXXUnit, Token Tok,
+                            CXToken *CXTok, bool *previousWasAt) {
+  //   - Common fields
+  CXTok->int_data[1] = Tok.getLocation().getRawEncoding();
+  CXTok->int_data[2] = Tok.getLength();
+  CXTok->int_data[3] = 0;
+
+  //   - Kind-specific fields
+  if (Tok.isLiteral()) {
+    CXTok->int_data[0] = CXToken_Literal;
+    CXTok->ptr_data = (void *)Tok.getLiteralData();
+  } else if (Tok.is(tok::raw_identifier)) {
+    // Lookup the identifier to determine whether we have a keyword.
+    IdentifierInfo *II
+      = CXXUnit->getPreprocessor().LookUpIdentifierInfo(Tok);
+
+    if ((II->getObjCKeywordID() != tok::objc_not_keyword) && *previousWasAt) {
+      CXTok->int_data[0] = CXToken_Keyword;
+    }
+    else {
+      CXTok->int_data[0] = Tok.is(tok::identifier)
+        ? CXToken_Identifier
+        : CXToken_Keyword;
+    }
+    CXTok->ptr_data = II;
+  } else if (Tok.is(tok::comment)) {
+    CXTok->int_data[0] = CXToken_Comment;
+    CXTok->ptr_data = 0;
+  } else {
+    CXTok->int_data[0] = CXToken_Punctuation;
+    CXTok->ptr_data = 0;
+  }
+  *previousWasAt = Tok.is(tok::at);
+}
+
 static void getTokens(ASTUnit *CXXUnit, SourceRange Range,
                       SmallVectorImpl<CXToken> &CXTokens) {
   SourceManager &SourceMgr = CXXUnit->getSourceManager();
@@ -4665,39 +4700,9 @@ static void getTokens(ASTUnit *CXXUnit, SourceRange Range,
 
     // Initialize the CXToken.
     CXToken CXTok;
+    initializeToken(CXXUnit, Tok, &CXTok, &previousWasAt);
 
-    //   - Common fields
-    CXTok.int_data[1] = Tok.getLocation().getRawEncoding();
-    CXTok.int_data[2] = Tok.getLength();
-    CXTok.int_data[3] = 0;
-
-    //   - Kind-specific fields
-    if (Tok.isLiteral()) {
-      CXTok.int_data[0] = CXToken_Literal;
-      CXTok.ptr_data = (void *)Tok.getLiteralData();
-    } else if (Tok.is(tok::raw_identifier)) {
-      // Lookup the identifier to determine whether we have a keyword.
-      IdentifierInfo *II
-        = CXXUnit->getPreprocessor().LookUpIdentifierInfo(Tok);
-
-      if ((II->getObjCKeywordID() != tok::objc_not_keyword) && previousWasAt) {
-        CXTok.int_data[0] = CXToken_Keyword;
-      }
-      else {
-        CXTok.int_data[0] = Tok.is(tok::identifier)
-          ? CXToken_Identifier
-          : CXToken_Keyword;
-      }
-      CXTok.ptr_data = II;
-    } else if (Tok.is(tok::comment)) {
-      CXTok.int_data[0] = CXToken_Comment;
-      CXTok.ptr_data = 0;
-    } else {
-      CXTok.int_data[0] = CXToken_Punctuation;
-      CXTok.ptr_data = 0;
-    }
     CXTokens.push_back(CXTok);
-    previousWasAt = Tok.is(tok::at);
   } while (Lex.getBufferLocation() <= EffectiveBufferEnd);
 }
 
@@ -5609,6 +5614,103 @@ CXType clang_getIBOutletCollectionType(CXCursor C) {
   
   return cxtype::MakeCXType(A->getInterface(), cxcursor::getCursorTU(C));  
 }
+} // end: extern "C"
+
+//===----------------------------------------------------------------------===//
+// Macro introspection.
+//===----------------------------------------------------------------------===//
+
+extern "C" {
+
+int clang_isMacroFunctionLike(CXCursor C) {
+  if (C.kind != CXCursor_MacroDefinition)
+    return 0;
+  MacroDefinition *MD = cxcursor::getCursorMacroDefinition(C);
+  return MD->getMacroInfo()->isFunctionLike();
+}
+
+CXMacroVarargsKind clang_getMacroVarargsKind(CXCursor C) {
+  if (C.kind != CXCursor_MacroDefinition)
+    return CXMacroVarargs_NotVariadic;
+  MacroDefinition *MD = cxcursor::getCursorMacroDefinition(C);
+  const MacroInfo *Macro = MD->getMacroInfo();
+  if (Macro->isC99Varargs())
+    return CXMacroVarargs_C99;
+  if (Macro->isGNUVarargs())
+    return CXMacroVarargs_GNU;
+  return CXMacroVarargs_NotVariadic;
+}
+
+int clang_isMacroBuiltin(CXCursor C) {
+  if (C.kind != CXCursor_MacroDefinition)
+    return 0;
+  MacroDefinition *MD = cxcursor::getCursorMacroDefinition(C);
+  return MD->getMacroInfo()->isBuiltinMacro();
+}
+
+unsigned clang_getNumMacroArgs(CXCursor C) {
+  if (C.kind != CXCursor_MacroDefinition)
+    return UINT_MAX;
+  MacroDefinition *MD = cxcursor::getCursorMacroDefinition(C);
+  const MacroInfo *Macro = MD->getMacroInfo();
+  if (!Macro->isFunctionLike())
+    return UINT_MAX;
+  return Macro->getNumArgs();
+}
+
+CXString clang_getMacroArgName(CXCursor C, unsigned index) {
+  if (C.kind != CXCursor_MacroDefinition)
+    return createCXString("");
+  MacroDefinition *MD = cxcursor::getCursorMacroDefinition(C);
+  const MacroInfo *Macro = MD->getMacroInfo();
+  if (index >= Macro->getNumArgs())
+    return createCXString("");
+  IdentifierInfo *II = Macro->arg_begin()[index];
+  return createCXString(II->getNameStart());
+}
+
+void clang_getMacroReplacementTokens(CXCursor C, CXToken **Tokens,
+                                     unsigned *NumTokens) {
+  if (Tokens)
+    *Tokens = 0;
+  if (NumTokens)
+    *NumTokens = 0;
+
+  CXTranslationUnit TU = getCursorTU(C);
+  ASTUnit *CXXUnit = static_cast<ASTUnit *>(TU->TUData);
+  if (!CXXUnit || !Tokens || !NumTokens)
+    return;
+
+  ASTUnit::ConcurrencyCheck Check(*CXXUnit);
+
+  if (C.kind != CXCursor_MacroDefinition)
+    return;
+
+  MacroDefinition *MD = cxcursor::getCursorMacroDefinition(C);
+  const MacroInfo *Macro = MD->getMacroInfo();
+
+  if (Macro->getNumTokens() == 0)
+    return;
+
+  SmallVector<CXToken, 32> CXTokens;
+
+  bool previousWasAt = false;
+  for (MacroInfo::tokens_iterator i = Macro->tokens_begin(), end = Macro->tokens_end();
+       i != end;
+       ++i) {
+    CXToken CXTok;
+    initializeToken(CXXUnit, *i, &CXTok, &previousWasAt);
+    CXTokens.push_back(CXTok);
+  }
+
+  assert(CXTokens.size() == Macro->getNumTokens() &&
+         "number of CXTokens should match number of macro Tokens");
+
+  *Tokens = (CXToken*)malloc(sizeof(CXToken) * CXTokens.size());
+  memmove(*Tokens, CXTokens.data(), sizeof(CXToken) * CXTokens.size());
+  *NumTokens = CXTokens.size();
+}
+
 } // end: extern "C"
 
 //===----------------------------------------------------------------------===//

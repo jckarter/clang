@@ -120,6 +120,9 @@ clang_getInclusions
 clang_getInstantiationLocation
 clang_getLocation
 clang_getLocationForOffset
+clang_getMacroArgName
+clang_getMacroReplacementTokens
+clang_getMacroVarargsKind
 clang_getNullCursor
 clang_getNullLocation
 clang_getNullRange
@@ -128,6 +131,7 @@ clang_getNumCompletionChunks
 clang_getNumDiagnostics
 clang_getNumDiagnosticsInSet
 clang_getNumElements
+clang_getNumMacroArgs
 clang_getNumOverloadedDecls
 clang_getOverloadedDecl
 clang_getOverriddenCursors
@@ -176,6 +180,8 @@ clang_isDeclaration
 clang_isExpression
 clang_isFileMultipleIncludeGuarded
 clang_isFunctionTypeVariadic
+clang_isMacroBuiltin
+clang_isMacroFunctionLike
 clang_isInvalid
 clang_isPODType
 clang_isPreprocessing
