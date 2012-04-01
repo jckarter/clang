@@ -4654,6 +4654,12 @@ static void initializeToken(ASTUnit *CXXUnit, Token Tok,
         : CXToken_Keyword;
     }
     CXTok->ptr_data = II;
+  } else if (Tok.is(tok::identifier)) {
+    CXTok->int_data[0] = CXToken_Identifier;
+    CXTok->ptr_data = Tok.getIdentifierInfo();
+  } else if (Tok.isKeyword()) {
+    CXTok->int_data[0] = CXToken_Keyword;
+    CXTok->ptr_data = Tok.getIdentifierInfo();
   } else if (Tok.is(tok::comment)) {
     CXTok->int_data[0] = CXToken_Comment;
     CXTok->ptr_data = 0;

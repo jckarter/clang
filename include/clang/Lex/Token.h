@@ -112,6 +112,14 @@ public:
     return false;
   }
 
+  bool isKeyword() const {
+#define KEYWORD(NAME, X) \
+    if (is(tok::kw_##NAME)) \
+      return true;
+#include "clang/Basic/TokenKinds.def"
+    return false;
+  }
+
   /// getLocation - Return a source location identifier for the specified
   /// offset in the current file.
   SourceLocation getLocation() const { return Loc; }
